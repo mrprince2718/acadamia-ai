@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Academia AI | Advanced Academic Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <style>
+      :root {
+        --brand-primary: #3b82f6;
+        --brand-indigo: #6366f1;
+        --surface-100: #ffffff;
+        --surface-200: #f8fafc;
+        --surface-300: #f1f5f9;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        color: var(--text-main);
+        background-color: var(--surface-100);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3, .font-display {
+        font-family: 'Outfit', sans-serif;
+      }
+
+      code, pre, .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      /* Animations */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .animate-fade-up {
+        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Custom Scrollbar */
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+      .thought-section {
+        border-left: 2px solid var(--brand-indigo);
+        background: rgba(99, 102, 241, 0.03);
+        border-radius: 0 12px 12px 0;
+        transition: all 0.3s ease;
+      }
+
+      .chat-max-width {
+        max-width: 840px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .prose h1, .prose h2, .prose h3 { margin-top: 2em; margin-bottom: 0.5em; font-weight: 800; color: #0f172a; }
+      .prose p { margin-bottom: 1.25em; line-height: 1.75; color: #334155; font-size: 1.05rem; }
+      .prose blockquote { border-left-color: #6366f1; background: #f5f7ff; padding: 1rem 1.5rem; border-radius: 0 1rem 1rem 0; font-style: normal; }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0",
+    "remark-math": "https://esm.sh/remark-math@^6.0.0",
+    "rehype-katex": "https://esm.sh/rehype-katex@^7.0.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+  </head>
+  <body class="selection:bg-indigo-100 selection:text-indigo-900">
+    <div id="root"></div>
+  </body>
+</html>

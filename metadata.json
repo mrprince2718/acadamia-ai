@@ -1,0 +1,8 @@
+{
+  "name": "Academia AI: Your Ultimate Study Tutor",
+  "description": "A comprehensive AI-powered academic tutor featuring real-time voice conversations, structured note-taking, complex concept mapping, and visual aid generation to help students master any subject.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
