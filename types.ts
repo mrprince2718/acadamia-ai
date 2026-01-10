@@ -7,6 +7,8 @@ export enum AppMode {
   STUDIO = 'STUDIO'
 }
 
+export type Language = 'EN' | 'GU';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -44,12 +46,31 @@ export interface MindMapPage {
 }
 
 export interface MindMapData {
+  id?: string;
   title: string;
   pages: MindMapPage[];
-  renderHints: {
+  timestamp?: number;
+  renderHints?: {
     nodeColor: string;
     icons: Record<string, string>;
   };
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+  diagramPrompt?: string; // Used to generate visual aids for the question
+  imageUrl?: string;
+}
+
+export interface QuizData {
+  id: string;
+  title: string;
+  questions: QuizQuestion[];
+  timestamp: number;
 }
 
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '9:16' | '16:9' | '2:3' | '3:2' | '21:9';

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { MindMapData } from "../types";
+import { MindMapData, QuizData } from "../types";
 
 export const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
@@ -17,17 +17,23 @@ export async function ensureApiKey() {
 
 const SYSTEM_INSTRUCTION = `You are an elite Academic Architect and JEE/NEET entrance specialist. 
 Your goal is to provide high-depth pedagogical content.
+- OCR & HANDWRITING SPECIALIST: You possess superior capabilities in analyzing handwritten student notes, messy whiteboard photos, and complex PDF documents.
 - MANDATORY: Use LaTeX for all mathematical equations ($...$ inline, $$...$$ blocks).
 - Rigorous step-by-step derivations for physics and chemistry.
 - For Study Notes: Create chapters with "Mastery Axioms", "Detailed Derivations", and "Advanced Entrance Logic".
+- ANALYSIS CAPABILITY: When analyzing handwritten notes, transcribe accurately, clarify messy parts, and expand on the concepts with academic rigor.
 - ABSOLUTE RULE: Never provide demo or placeholder content. Every response must be a real, complete educational asset ready for a top-tier student.`;
+
+function cleanJsonResponse(text: string): string {
+  return text.replace(/```json/g, "").replace(/```/g, "").trim();
+}
 
 export async function askTutor(params: {
   prompt: string;
   useThinking?: boolean;
   useSearch?: boolean;
   useFast?: boolean;
-  image?: { data: string; mimeType: string };
+  mediaParts?: Array<{ data: string; mimeType: string }>;
 }) {
   if (params.useThinking) await ensureApiKey();
   
@@ -49,12 +55,19 @@ export async function askTutor(params: {
     config.tools = [{ googleSearch: {} }];
   }
 
+  // Build parts
+  const parts: any[] = [];
+  if (params.mediaParts && params.mediaParts.length > 0) {
+    params.mediaParts.forEach(m => {
+      parts.push({ inlineData: { data: m.data, mimeType: m.mimeType } });
+    });
+  }
+  parts.push({ text: params.prompt });
+
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: params.image 
-        ? { parts: [{ inlineData: params.image }, { text: params.prompt }] } 
-        : params.prompt,
+      contents: { parts },
       config,
     });
 
@@ -74,17 +87,70 @@ export async function askTutor(params: {
   }
 }
 
+export async function generateQuiz(topic: string, language: string): Promise<QuizData> {
+  const ai = getGeminiClient();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Synthesize a highly technical "QUIZ RUSH" protocol for "${topic}".
+    Language: ${language === 'GU' ? 'Gujarati' : 'English'}.
+    Target: JEE/NEET entrance difficulty level.
+    Structure: 5 high-depth questions.
+    For each question:
+    - Include 4 challenging options.
+    - provide a detailed explanation.
+    - If the question involves a structure (like Organic Chemistry GOC, Physics circuit, or Bio cell), provide a detailed 'diagramPrompt' describing only the visual aid needed.
+    Output ONLY JSON.`,
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          questions: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                question: { type: Type.STRING },
+                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                correctAnswerIndex: { type: Type.NUMBER },
+                explanation: { type: Type.STRING },
+                diagramPrompt: { type: Type.STRING }
+              },
+              required: ['id', 'question', 'options', 'correctAnswerIndex', 'explanation']
+            }
+          }
+        },
+        required: ['title', 'questions']
+      }
+    }
+  });
+
+  try {
+    const cleaned = cleanJsonResponse(response.text || '{}');
+    const data = JSON.parse(cleaned);
+    return { ...data, id: Date.now().toString(), timestamp: Date.now() };
+  } catch (e) {
+    throw new Error("Quiz synthesis failed.");
+  }
+}
+
 export async function generateMindMap(topic: string): Promise<MindMapData> {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Generate an n8n-style interactive mind map for "${topic}".
-Break it into 4 distinct, high-quality learning stages:
-1. Foundation Concepts
-2. Core Mechanics & Formulas
-3. Advanced Problem Solving
-4. Competitive Exam Tips
-Keep node content concise to avoid JSON truncation errors. Output valid JSON.`,
+    contents: `Construct a "Mastery Architecture" Mind Map for "${topic}".
+The output must be a highly technical, interconnected graph designed for top-tier competitive exams.
+Break it into 4 specialized pages:
+1. "Foundational Axioms & Lexicon": Define the root principles and terminology.
+2. "Mathematical Frameworks & Derivatives": Focus on formulas, derivations, and variable relationships. Use LaTeX.
+3. "Competitive Exam Logic (JEE/NEET)": Focus on common pitfalls, edge cases, and high-yield concepts.
+4. "Synthesis & Real-World Application": How this topic connects to larger academic themes.
+
+Each page should have 5-8 nodes. Connect them with logical flow edges. 
+Ensure 'label' is the title and 'content' is a deep, expert-level explanation (at least 2-3 sentences).
+Output ONLY JSON.`,
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
@@ -105,7 +171,7 @@ Keep node content concise to avoid JSON truncation errors. Output valid JSON.`,
                     properties: {
                       id: { type: Type.STRING },
                       label: { type: Type.STRING },
-                      type: { type: Type.STRING },
+                      type: { type: Type.STRING, enum: ['topic', 'subtopic', 'example', 'tip', 'mistake', 'formula'] },
                       content: { type: Type.STRING }
                     },
                     required: ['id', 'label', 'type', 'content']
@@ -133,10 +199,11 @@ Keep node content concise to avoid JSON truncation errors. Output valid JSON.`,
   });
 
   try {
-    return JSON.parse(response.text || '{}') as MindMapData;
+    const cleaned = cleanJsonResponse(response.text || '{}');
+    return JSON.parse(cleaned) as MindMapData;
   } catch (e) {
-    console.error("JSON Parsing failed. Attempting fallback or returning empty structure.");
-    throw new Error("Model generated invalid JSON structure. Please retry.");
+    console.error("JSON Parsing failed.", response.text);
+    throw new Error("Logic synthesis failed. Please re-initialize.");
   }
 }
 
@@ -145,7 +212,9 @@ export async function generateStudyVisual(prompt: string, aspectRatio: string) {
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-image-preview',
-    contents: { parts: [{ text: `Professional educational diagram: ${prompt}. Clean white background, technical labeling, high precision for JEE/NEET study aids.` }] },
+    contents: { parts: [{ text: `High-fidelity academic architectural diagram of: ${prompt}. 
+Style: Technical blueprint, clean white background, ISO-standard labeling, microscopic precision, textbook-quality rendering. 
+Target Audience: Medical and Engineering students. Use vector-like clarity.` }] },
     config: {
       imageConfig: { aspectRatio: aspectRatio as any, imageSize: "1K" }
     }
@@ -156,36 +225,5 @@ export async function generateStudyVisual(prompt: string, aspectRatio: string) {
       return `data:image/png;base64,${part.inlineData.data}`;
     }
   }
-  throw new Error("Visual aid generation failed.");
-}
-
-export function decodeBase64(base64: string) {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-export async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate = 24000, numChannels = 1): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
-  }
-  return buffer;
-}
-
-export function encodeAudio(data: Float32Array): string {
-  const int16 = new Int16Array(data.length);
-  for (let i = 0; i < data.length; i++) int16[i] = data[i] * 32768;
-  const bytes = new Uint8Array(int16.buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
+  throw new Error("Visual synthesis failed.");
 }
