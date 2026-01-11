@@ -55,7 +55,6 @@ export async function askTutor(params: {
     config.tools = [{ googleSearch: {} }];
   }
 
-  // Build parts
   const parts: any[] = [];
   if (params.mediaParts && params.mediaParts.length > 0) {
     params.mediaParts.forEach(m => {
@@ -87,18 +86,52 @@ export async function askTutor(params: {
   }
 }
 
+/**
+ * Uses the specific PicoApps WebSocket API provided by the user for note synthesis.
+ * This bypasses the Google GenAI SDK for the notes feature as requested.
+ */
+export function synthesizeNotesPico(prompt: string, onChunk: (chunk: string) => void, onComplete: () => void, onError: (err: any) => void) {
+  const ws = new WebSocket(`wss://backend.buildpicoapps.com/ask_ai_streaming_v2`);
+  
+  ws.addEventListener("open", () => {
+    ws.send(
+      JSON.stringify({
+        appId: "home-suggest", 
+        prompt: `Act as a senior academic tutor. Analyze the following topic/text and create a structured, high-depth study chapter with axioms, exam-focused points, and summary: ${prompt}`
+      })
+    );
+  });
+
+  ws.addEventListener("message", (event) => {
+    onChunk(event.data);
+  });
+
+  ws.addEventListener("close", (event) => {
+    if (event.code !== 1000) {
+      console.warn("WS Closed unexpectedly", event.code);
+    }
+    onComplete();
+  });
+
+  ws.addEventListener("error", (error) => {
+    console.error("WS Error", error);
+    onError(error);
+  });
+
+  return () => {
+    if (ws.readyState === WebSocket.OPEN) ws.close();
+  };
+}
+
 export async function generateQuiz(topic: string, language: string): Promise<QuizData> {
+  await ensureApiKey();
   const ai = getGeminiClient();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Synthesize a highly technical "QUIZ RUSH" protocol for "${topic}".
+    contents: `Synthesize a technical "QUIZ RUSH" protocol for "${topic}".
     Language: ${language === 'GU' ? 'Gujarati' : 'English'}.
-    Target: JEE/NEET entrance difficulty level.
-    Structure: 5 high-depth questions.
-    For each question:
-    - Include 4 challenging options.
-    - provide a detailed explanation.
-    - If the question involves a structure (like Organic Chemistry GOC, Physics circuit, or Bio cell), provide a detailed 'diagramPrompt' describing only the visual aid needed.
+    Structure: 5 challenging questions targeting JEE/NEET/Advanced levels. 
+    VISUAL REQUIREMENT: For subjects like Organic Chemistry (GOC, Isomerism), Physics (Circuits, Optics), or Biology, strictly provide a detailed 'diagramPrompt' describing the necessary visual aid.
     Output ONLY JSON.`,
     config: {
       responseMimeType: 'application/json',
@@ -116,7 +149,7 @@ export async function generateQuiz(topic: string, language: string): Promise<Qui
                 options: { type: Type.ARRAY, items: { type: Type.STRING } },
                 correctAnswerIndex: { type: Type.NUMBER },
                 explanation: { type: Type.STRING },
-                diagramPrompt: { type: Type.STRING }
+                diagramPrompt: { type: Type.STRING, description: 'Prompt for image generator to create a technical diagram' }
               },
               required: ['id', 'question', 'options', 'correctAnswerIndex', 'explanation']
             }
@@ -141,15 +174,6 @@ export async function generateMindMap(topic: string): Promise<MindMapData> {
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Construct a "Mastery Architecture" Mind Map for "${topic}".
-The output must be a highly technical, interconnected graph designed for top-tier competitive exams.
-Break it into 4 specialized pages:
-1. "Foundational Axioms & Lexicon": Define the root principles and terminology.
-2. "Mathematical Frameworks & Derivatives": Focus on formulas, derivations, and variable relationships. Use LaTeX.
-3. "Competitive Exam Logic (JEE/NEET)": Focus on common pitfalls, edge cases, and high-yield concepts.
-4. "Synthesis & Real-World Application": How this topic connects to larger academic themes.
-
-Each page should have 5-8 nodes. Connect them with logical flow edges. 
-Ensure 'label' is the title and 'content' is a deep, expert-level explanation (at least 2-3 sentences).
 Output ONLY JSON.`,
     config: {
       responseMimeType: 'application/json',
@@ -202,8 +226,7 @@ Output ONLY JSON.`,
     const cleaned = cleanJsonResponse(response.text || '{}');
     return JSON.parse(cleaned) as MindMapData;
   } catch (e) {
-    console.error("JSON Parsing failed.", response.text);
-    throw new Error("Logic synthesis failed. Please re-initialize.");
+    throw new Error("Logic synthesis failed.");
   }
 }
 

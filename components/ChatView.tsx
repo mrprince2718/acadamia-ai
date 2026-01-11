@@ -66,12 +66,21 @@ const ChatView: React.FC = () => {
       finalPrompt = "Follow instructions precisely! If the user asks to generate, create or make an image, photo, or picture by describing it, You will reply with '/image' + description. Otherwise, You will respond normally. Avoid additional explanations." + prompt;
     }
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: finalPrompt })
-    });
-    return response.json();
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: finalPrompt })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("PicoApps API Error:", error);
+      return { status: 'error', text: "Connection interruption detected. Please retry." };
+    }
   };
 
   const handleSend = async () => {
@@ -131,7 +140,7 @@ const ChatView: React.FC = () => {
             aiMessage.text = data.text;
           }
         } else {
-          aiMessage.text = "Communication link unstable. Synthesis aborted.";
+          aiMessage.text = data.text || "Communication link unstable. Synthesis aborted.";
         }
       }
 
